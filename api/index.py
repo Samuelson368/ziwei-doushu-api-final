@@ -26,7 +26,7 @@ class ZiweiAPI:
         # 根据环境设置路径 - 针对api/目录结构优化
         if self.is_vercel:
             # Vercel环境：脚本在根目录，Python在api/目录
-            self.script_path = '/var/task/ziwei_node_script.js'
+            self.script_path = '/var/task/api/ziwei_node_script.js'
             self.node_path = 'node'
         elif self.is_railway or self.is_render:
             # Railway/Render环境：从api目录访问根目录
