@@ -1,0 +1,12 @@
+{
+  "name": "ziwei-api",
+  "version": "1.0.0",
+  "description": "紫微斗数API服务",
+  "main": "ziwei_node_script.js",
+  "dependencies": {
+    "iztro": "^2.4.5"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}

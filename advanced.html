@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>紫微斗数高级功能</title>
+    <style>
+        body { 
+            font-family: "Microsoft YaHei", Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: rgba(255, 255, 255, 0.95); 
+            padding: 30px; 
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+        .header h1 {
+            color: #333;
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        .section { 
+            margin: 20px 0; 
+            padding: 20px; 
+            background: #f9f9f9; 
+            border-radius: 8px; 
+            border-left: 4px solid #667eea;
+        }
+        .btn { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .result { 
+            background: white; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        .debug-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+        }
+        .input-group input {
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔮 紫微斗数高级功能演示</h1>
+            <p>深度分析紫微斗数星盘的各种功能</p>
+        </div>
+        
+        <!-- 调试信息 -->
+        <div id="debugInfo" class="debug-info">
+            <strong>调试信息：</strong><span id="debugText">正在加载...</span>
+        </div>
+        
+        <div class="section">
+            <h3>📊 生成示例星盘</h3>
+            <p>首先生成一个星盘作为演示基础</p>
+            <button class="btn" onclick="generateSampleAstrolabe()">生成示例星盘 (2000-08-16 寅时 女)</button>
+            <div id="sampleResult"></div>
+        </div>
+        
+        <div class="section">
+            <h3>1. 星耀查询功能</h3>
+            <p>查找特定星耀的位置和相关信息</p>
+            <button class="btn" onclick="findStar()">查找紫微星位置</button>
+            <button class="btn" onclick="findStarPalaces()">查找紫微星三方四正</button>
+            <button class="btn" onclick="findAllMajorStars()">查找所有主星位置</button>
+            <div id="starResult"></div>
+        </div>
+        
+        <div class="section">
+            <h3>2. 四化查询功能</h3>
+            <p>分析四化星的位置和影响</p>
+            <button class="btn" onclick="findMutagen()">查找化忌星</button>
+            <button class="btn" onclick="findAllMutagens()">查找所有四化</button>
+            <button class="btn" onclick="checkMutagen()">检查紫微星是否化忌</button>
+            <div id="mutagenResult"></div>
+        </div>
+        
+        <div class="section">
+            <h3>3. 运限查询功能</h3>
+            <p>查看不同时间的运势变化</p>
+            <div class="input-group">
+                <label>查询日期：</label>
+                <input type="date" id="horoscopeDate" value="2025-01-01">
+                <button class="btn" onclick="getHoroscope()">查看流年运势</button>
+            </div>
+            <button class="btn" onclick="getCurrentHoroscope()">查看当前运势</button>
+            <div id="horoscopeResult"></div>
+        </div>
+        
+        <div class="section">
+            <h3>4. 链式查询演示</h3>
+            <p>展示iztro强大的链式查询功能</p>
+            <button class="btn" onclick="chainQuery1()">紫微星三方四正是否有化忌</button>
+            <button class="btn" onclick="chainQuery2()">命宫是否有主星</button>
+            <button class="btn" onclick="chainQuery3()">财帛宫三方四正的星耀</button>
+            <div id="chainResult"></div>
+        </div>
+        
+        <div class="section">
+            <h3>5. 宫位分析功能</h3>
+            <p>分析特定宫位的详细信息</p>
+            <button class="btn" onclick="analyzePalace('命')">分析命宫</button>
+            <button class="btn" onclick="analyzePalace('财帛')">分析财帛宫</button>
+            <button class="btn" onclick="analyzePalace('夫妻')">分析夫妻宫</button>
+            <button class="btn" onclick="findEmptyPalaces()">查找空宫</button>
+            <div id="palaceResult"></div>
+        </div>
+    </div>
+
+    <!-- 引入库文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/iztro@latest/dist/index.min.js"></script>
+    <script>
+        let astrolabe = null; // 全局星盘变量
+        
+        // 调试函数
+        function updateDebugInfo(message) {
+            document.getElementById('debugText').textContent = message;
+        }
+        
+        // 检查库加载状态
+        function checkLibraryStatus() {
+            if (typeof iztro !== 'undefined') {
+                updateDebugInfo('✅ iztro库加载成功！版本：' + (iztro.version || '未知'));
+                return true;
+            } else {
+                updateDebugInfo('❌ iztro库加载失败，请检查网络连接');
+                return false;
+            }
+        }
+        
+        // 生成示例星盘
+        function generateSampleAstrolabe() {
+            try {
+                if (!checkLibraryStatus()) {
+                    alert('库未加载，请刷新页面重试');
+                    return;
+                }
+                
+                updateDebugInfo('正在生成示例星盘...');
+                astrolabe = iztro.astro.bySolar('2000-8-16', 2, '女', true, 'zh-CN');
+                
+                document.getElementById('sampleResult').innerHTML = `
+                    <div class="result">
+                        <h4>✅ 示例星盘生成成功！</h4>
+                        <p><strong>基本信息：</strong></p>
+                        <p>性别：${astrolabe.gender} | 阳历：${astrolabe.solarDate} | 农历：${astrolabe.lunarDate}</p>
+                        <p>星座：${astrolabe.sign} | 生肖：${astrolabe.zodiac}</p>
+                        <p>命宫：${astrolabe.soul} | 身宫：${astrolabe.body}</p>
+                    </div>
+                `;
+                
+                updateDebugInfo('✅ 示例星盘生成成功，可以使用其他功能了');
+                console.log('示例星盘：', astrolabe);
+            } catch (error) {
+                updateDebugInfo('❌ 生成示例星盘失败：' + error.message);
+                console.error('生成示例星盘失败：', error);
+            }
+        }
+        
+        // 1. 查找星耀位置
+        function findStar() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const result = astrolabe.star('紫微');
+                document.getElementById('starResult').innerHTML = `
+                    <div class="result">
+                        <h4>紫微星位置查询结果：</h4>
+                        <p>紫微星位于：<strong>${result.palace().name}</strong></p>
+                        <p>该宫位天干地支：<strong>${result.palace().heavenlyStem}${result.palace().earthlyBranch}</strong></p>
+                        <p>紫微星亮度：<strong>${result.brightness()}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('starResult').innerHTML = `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function findStarPalaces() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const result = astrolabe.star('紫微').surroundedPalaces();
+                let palaceNames = result.map(p => p.name).join('、');
+                document.getElementById('starResult').innerHTML += `
+                    <div class="result">
+                        <h4>紫微星三方四正：</h4>
+                        <p><strong>${palaceNames}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('starResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function findAllMajorStars() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const majorStarNames = ['紫微', '天机', '太阳', '武曲', '天同', '廉贞', '天府', '太阴', '贪狼', '巨门', '天相', '天梁', '七杀', '破军'];
+                let starPositions = [];
+                
+                majorStarNames.forEach(starName => {
+                    try {
+                        const star = astrolabe.star(starName);
+                        if (star) {
+                            starPositions.push(`${starName}：${star.palace().name}`);
+                        }
+                    } catch (e) {
+                        // 某些星可能不存在，忽略错误
+                    }
+                });
+                
+                document.getElementById('starResult').innerHTML += `
+                    <div class="result">
+                        <h4>所有主星位置：</h4>
+                        <p>${starPositions.join(' | ')}</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('starResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        // 2. 四化查询
+        function findMutagen() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const result = astrolabe.haveMutagen('忌');
+                let palaceNames = result.map(p => p.name).join('、');
+                document.getElementById('mutagenResult').innerHTML = `
+                    <div class="result">
+                        <h4>化忌星所在宫位：</h4>
+                        <p><strong>${palaceNames || '无化忌'}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('mutagenResult').innerHTML = `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function findAllMutagens() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const mutagens = ['禄', '权', '科', '忌'];
+                let mutagenResults = [];
+                
+                mutagens.forEach(mutagen => {
+                    const result = astrolabe.haveMutagen(mutagen);
+                    const palaces = result.map(p => p.name).join('、');
+                    mutagenResults.push(`化${mutagen}：${palaces || '无'}`);
+                });
+                
+                document.getElementById('mutagenResult').innerHTML += `
+                    <div class="result">
+                        <h4>所有四化分布：</h4>
+                        <p>${mutagenResults.join('<br>')}</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('mutagenResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function checkMutagen() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const result = astrolabe.star('紫微').mutagen();
+                document.getElementById('mutagenResult').innerHTML += `
+                    <div class="result">
+                        <h4>紫微星四化情况：</h4>
+                        <p><strong>${result || '无四化'}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('mutagenResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        // 3. 运限查询
+        function getHoroscope() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const date = document.getElementById('horoscopeDate').value;
+                const horoscope = astrolabe.horoscope(date);
+                
+                document.getElementById('horoscopeResult').innerHTML = `
+                    <div class="result">
+                        <h4>${date} 的运限信息：</h4>
+                        <p><strong>大限：</strong>${horoscope.decadal.range} (${horoscope.decadal.palaceName})</p>
+                        <p><strong>流年：</strong>${horoscope.yearly.year} (${horoscope.yearly.palaceName})</p>
+                        <p><strong>流月：</strong>${horoscope.monthly.month} (${horoscope.monthly.palaceName})</p>
+                        <p><strong>流日：</strong>${horoscope.daily.date} (${horoscope.daily.palaceName})</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('horoscopeResult').innerHTML = `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function getCurrentHoroscope() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const horoscope = astrolabe.horoscope(today);
+                
+                document.getElementById('horoscopeResult').innerHTML += `
+                    <div class="result">
+                        <h4>当前运势 (${today})：</h4>
+                        <p><strong>大限：</strong>${horoscope.decadal.range} (${horoscope.decadal.palaceName})</p>
+                        <p><strong>流年：</strong>${horoscope.yearly.year} (${horoscope.yearly.palaceName})</p>
+                        <p><strong>流月：</strong>${horoscope.monthly.month} (${horoscope.monthly.palaceName})</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('horoscopeResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        // 4. 链式查询
+        function chainQuery1() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const result = astrolabe.star('紫微').surroundedPalaces().haveMutagen('忌');
+                document.getElementById('chainResult').innerHTML = `
+                    <div class="result">
+                        <h4>紫微星三方四正化忌情况：</h4>
+                        <p><strong>${result.length > 0 ? `有化忌，位于：${result.map(p => p.name).join('、')}` : '无化忌'}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('chainResult').innerHTML = `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function chainQuery2() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const soulPalace = astrolabe.palace('命');
+                const hasMajorStars = soulPalace.majorStars.length > 0;
+                
+                document.getElementById('chainResult').innerHTML += `
+                    <div class="result">
+                        <h4>命宫主星情况：</h4>
+                        <p><strong>${hasMajorStars ? `有主星：${soulPalace.majorStars.map(s => s.name).join('、')}` : '命宫无主星（空宫）'}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('chainResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        function chainQuery3() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const result = astrolabe.palace('财帛').surroundedPalaces();
+                const allStars = [];
+                
+                result.forEach(palace => {
+                    palace.majorStars.forEach(star => allStars.push(star.name));
+                });
+                
+                document.getElementById('chainResult').innerHTML += `
+                    <div class="result">
+                        <h4>财帛宫三方四正的主星：</h4>
+                        <p><strong>${allStars.length > 0 ? allStars.join('、') : '无主星'}</strong></p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('chainResult').innerHTML += `<div class="result">查询失败：${error.message}</div>`;
+            }
+        }
+        
+        // 5. 宫位分析
+        function analyzePalace(palaceName) {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const palace = astrolabe.palace(palaceName);
+                const majorStars = palace.majorStars.map(s => s.name).join('、') || '无';
+                const minorStars = palace.minorStars.map(s => s.name).join('、') || '无';
+                
+                document.getElementById('palaceResult').innerHTML = `
+                    <div class="result">
+                        <h4>${palaceName}宫详细分析：</h4>
+                        <p><strong>天干地支：</strong>${palace.heavenlyStem}${palace.earthlyBranch}</p>
+                        <p><strong>主星：</strong>${majorStars}</p>
+                        <p><strong>辅星：</strong>${minorStars}</p>
+                        <p><strong>是否空宫：</strong>${palace.majorStars.length === 0 ? '是' : '否'}</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('palaceResult').innerHTML = `<div class="result">分析失败：${error.message}</div>`;
+            }
+        }
+        
+        function findEmptyPalaces() {
+            if (!astrolabe) {
+                alert('请先生成示例星盘！');
+                return;
+            }
+            
+            try {
+                const emptyPalaces = astrolabe.palaces.filter(palace => palace.majorStars.length === 0);
+                const emptyNames = emptyPalaces.map(p => p.name).join('、');
+                
+                document.getElementById('palaceResult').innerHTML += `
+                    <div class="result">
+                        <h4>空宫分析：</h4>
+                        <p><strong>空宫：</strong>${emptyNames || '无空宫'}</p>
+                        <p><strong>空宫数量：</strong>${emptyPalaces.length}/12</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('palaceResult').innerHTML += `<div class="result">分析失败：${error.message}</div>`;
+            }
+        }
+        
+        // 页面加载时检查库状态
+        window.onload = function() {
+            setTimeout(() => {
+                checkLibraryStatus();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

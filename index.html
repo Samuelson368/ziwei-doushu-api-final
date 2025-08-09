@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紫微斗数排盘系统 - 完整版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .status {
+            padding: 20px;
+            margin: 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #10b981;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #ef4444;
+        }
+        
+        .form-section {
+            padding: 30px;
+            background: white;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        
+        input, select {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #6366f1;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .results-section {
+            padding: 30px;
+            background: #f9fafb;
+        }
+        
+        .basic-info {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .basic-info h3 {
+            color: #6366f1;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #6366f1;
+            padding-bottom: 10px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #6366f1;
+        }
+        
+        .info-item strong {
+            color: #374151;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .chart-title {
+            text-align: center;
+            color: #6366f1;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .palace-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 15px;
+            aspect-ratio: 4/3;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .palace {
+            background: white;
+            border: 3px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.3s ease;
+            min-height: 180px;
+        }
+        
+        .palace:hover {
+            border-color: #6366f1;
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .palace.soul-palace {
+            border-color: #dc2626;
+            background: linear-gradient(135deg, #fee2e2, #fef2f2);
+        }
+        
+        .palace.body-palace {
+            border-color: #059669;
+            background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+        }
+        
+        .palace-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .palace-name {
+            font-weight: bold;
+            color: #374151;
+            font-size: 16px;
+        }
+        
+        .palace-branch {
+            background: #6366f1;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .palace-indicators {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .indicator {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .indicator.soul {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .indicator.body {
+            background: #059669;
+            color: white;
+        }
+        
+        .stars-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .star-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .star {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            white-space: nowrap;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .star:hover {
+            transform: scale(1.05);
+        }
+        
+        .star.major {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            border: 2px solid #4338ca;
+        }
+        
+        .star.minor {
+            background: linear-gradient(45deg, #10b981, #14b8a6);
+            color: white;
+            border: 2px solid #059669;
+        }
+        
+        .star.adjective {
+            background: linear-gradient(45deg, #f59e0b, #f97316);
+            color: white;
+            border: 2px solid #d97706;
+        }
+        
+        .mutagen {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .mutagen.禄 {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .mutagen.权 {
+            background: #7c3aed;
+            color: white;
+        }
+        
+        .mutagen.科 {
+            background: #059669;
+            color: white;
+        }
+        
+        .mutagen.忌 {
+            background: #374151;
+            color: white;
+        }
+        
+        .brightness {
+            font-size: 8px;
+            margin-left: 4px;
+            opacity: 0.8;
+        }
+        
+        .debug-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f1f5f9;
+            border-radius: 10px;
+            border: 2px solid #cbd5e1;
+        }
+        
+        .debug-title {
+            color: #475569;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .debug-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6366f1;
+            font-size: 18px;
+        }
+        
+        .loading::after {
+            content: '';
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { content: '排盘中.'; }
+            33% { content: '排盘中..'; }
+            66% { content: '排盘中...'; }
+            100% { content: '排盘中.'; }
+        }
+        
+        /* 宫位网格布局 */
+        .palace:nth-child(5) { grid-column: 1; grid-row: 1; } /* 巳宫 */
+        .palace:nth-child(6) { grid-column: 2; grid-row: 1; } /* 午宫 */
+        .palace:nth-child(7) { grid-column: 3; grid-row: 1; } /* 未宫 */
+        .palace:nth-child(8) { grid-column: 4; grid-row: 1; } /* 申宫 */
+        .palace:nth-child(4) { grid-column: 1; grid-row: 2; } /* 辰宫 */
+        .palace:nth-child(9) { grid-column: 4; grid-row: 2; } /* 酉宫 */
+        .palace:nth-child(3) { grid-column: 1; grid-row: 3; } /* 卯宫 */
+        .palace:nth-child(2) { grid-column: 2; grid-row: 3; } /* 寅宫 */
+        .palace:nth-child(1) { grid-column: 3; grid-row: 3; } /* 丑宫 */
+        .palace:nth-child(12) { grid-column: 4; grid-row: 3; } /* 子宫 */
+        .palace:nth-child(11) { grid-column: 3; grid-row: 2; } /* 亥宫 */
+        .palace:nth-child(10) { grid-column: 2; grid-row: 2; } /* 戌宫 */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌟 紫微斗数排盘系统</h1>
+            <p>基于 iztro 官方库的专业排盘工具</p>
+        </div>
+        
+        <div id="status" class="status">
+            <span id="statusText">初始化中...</span>
+        </div>
+        
+        <div class="form-section">
+            <h2>📝 请输入您的基本信息</h2>
+            <form id="astroForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="name">姓名</label>
+                        <input type="text" id="name" value="测试用户" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="gender">性别</label>
+                        <select id="gender" required>
+                            <option value="男">男</option>
+                            <option value="女">女</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="birthday">出生日期（阳历）</label>
+                        <input type="date" id="birthday" value="2000-08-16" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="birthTime">出生时辰</label>
+                        <select id="birthTime" required>
+                            <option value="0">子时 (23:00-01:00)</option>
+                            <option value="1">丑时 (01:00-03:00)</option>
+                            <option value="2" selected>寅时 (03:00-05:00)</option>
+                            <option value="3">卯时 (05:00-07:00)</option>
+                            <option value="4">辰时 (07:00-09:00)</option>
+                            <option value="5">巳时 (09:00-11:00)</option>
+                            <option value="6">午时 (11:00-13:00)</option>
+                            <option value="7">未时 (13:00-15:00)</option>
+                            <option value="8">申时 (15:00-17:00)</option>
+                            <option value="9">酉时 (17:00-19:00)</option>
+                            <option value="10">戌时 (19:00-21:00)</option>
+                            <option value="11">亥时 (21:00-23:00)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn">🔮 开始排盘</button>
+            </form>
+        </div>
+        
+        <div id="results" class="results-section" style="display: none;">
+            <div id="basicInfo" class="basic-info">
+                <h3>📊 基本信息</h3>
+                <div id="infoContent" class="info-grid"></div>
+            </div>
+            
+            <div class="chart-container">
+                <h3 class="chart-title">🏮 紫微斗数星盘</h3>
+                <div id="chartGrid" class="palace-grid"></div>
+            </div>
+            
+            <div id="debugSection" class="debug-section">
+                <div class="debug-title">🔧 调试信息</div>
+                <div id="debugContent" class="debug-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入本地 iztro 库 -->
+    <script src="./js/iztro.min.js"></script>
+    
+    <script>
+        // 全局变量
+        let currentAstrolabe = null;
+        
+        // 检查库加载状态
+        function checkLibraryStatus() {
+            const statusElement = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            
+            if (typeof iztro !== 'undefined' && iztro.astro) {
+                statusElement.className = 'status success';
+                statusText.textContent = '✅ iztro库加载成功！准备就绪';
+                return true;
+            } else {
+                statusElement.className = 'status error';
+                statusText.textContent = '❌ iztro库加载失败，请检查 js/iztro.min.js 文件';
+                return false;
+            }
+        }
+        
+        // 时辰名称映射
+        const timeNames = [
+            '子时', '丑时', '寅时', '卯时', '辰时', '巳时',
+            '午时', '未时', '申时', '酉时', '戌时', '亥时'
+        ];
+        
+        // 地支名称映射（寅为首，顺时针）
+        const branchNames = [
+            '寅', '卯', '辰', '巳', '午', '未',
+            '申', '酉', '戌', '亥', '子', '丑'
+        ];
+        
+        // 生成排盘
+        function generateAstrolabe(formData) {
+            try {
+                console.log('🔧 开始生成排盘，参数:', formData);
+                
+                // 使用官方API调用方法
+                const astrolabe = iztro.astro.bySolar(
+                    formData.birthday,      // 阳历日期字符串 "2000-8-16"
+                    parseInt(formData.birthTime),  // 时辰索引 0-11
+                    formData.gender,        // 性别 "男"/"女"
+                    true,                   // 修正闰年
+                    'zh-CN'                 // 语言
+                );
+                
+                console.log('✅ 排盘生成成功');
+                console.log('📊 astrolabe对象:', astrolabe);
+                
+                return astrolabe;
+            } catch (error) {
+                console.error('❌ 排盘生成失败:', error);
+                throw error;
+            }
+        }
+        
+        // 显示基本信息
+        function displayBasicInfo(astrolabe) {
+            const infoContent = document.getElementById('infoContent');
+            
+            const basicInfo = {
+                '阳历日期': astrolabe.solarDate,
+                '农历日期': astrolabe.lunarDate,
+                '时辰': astrolabe.time,
+                '时间段': astrolabe.timeRange,
+                '星座': astrolabe.sign,
+                '生肖': astrolabe.zodiac,
+                '五行局': astrolabe.fiveElementsClass,
+                '命宫地支': astrolabe.earthlyBranchOfSoulPalace,
+                '身宫地支': astrolabe.earthlyBranchOfBodyPalace,
+                '命主': astrolabe.soul,
+                '身主': astrolabe.body
+            };
+            
+            infoContent.innerHTML = Object.entries(basicInfo)
+                .map(([key, value]) => `
+                    <div class="info-item">
+                        <strong>${key}:</strong> ${value || '未知'}
+                    </div>
+                `).join('');
+        }
+        
+        // 显示星盘
+        function displayChart(astrolabe) {
+            const chartGrid = document.getElementById('chartGrid');
+            
+            // 获取命宫和身宫位置
+            const soulPalaceIndex = astrolabe.palaces.findIndex(p => 
+                p.earthlyBranch === astrolabe.earthlyBranchOfSoulPalace
+            );
+            const bodyPalaceIndex = astrolabe.palaces.findIndex(p => 
+                p.earthlyBranch === astrolabe.earthlyBranchOfBodyPalace
+            );
+            
+            console.log('🏮 命宫位置:', soulPalaceIndex, astrolabe.earthlyBranchOfSoulPalace);
+            console.log('🏮 身宫位置:', bodyPalaceIndex, astrolabe.earthlyBranchOfBodyPalace);
+            
+            let chartHTML = '';
+            
+            // 按照传统排列顺序显示宫位
+            astrolabe.palaces.forEach((palace, index) => {
+                const isSoulPalace = index === soulPalaceIndex;
+                const isBodyPalace = index === bodyPalaceIndex;
+                
+                // 获取所有星耀
+                const majorStars = palace.majorStars || [];
+                const minorStars = palace.minorStars || [];
+                const adjectiveStars = palace.adjectiveStars || [];
+                
+                console.log(`🏮 ${palace.name}宫 (索引${index}):`);
+                console.log('  主星:', majorStars.map(s => `${s.name}${s.brightness ? `(${s.brightness})` : ''}`));
+                console.log('  辅星:', minorStars.map(s => s.name));
+                console.log('  杂耀:', adjectiveStars.map(s => s.name));
+                
+                chartHTML += `
+                    <div class="palace ${isSoulPalace ? 'soul-palace' : ''} ${isBodyPalace ? 'body-palace' : ''}"
+                         title="${palace.name}宫 - ${palace.earthlyBranch}">
+                        <div class="palace-header">
+                            <div class="palace-name">${palace.name}</div>
+                            <div class="palace-branch">${palace.earthlyBranch}</div>
+                        </div>
+                        
+                        <div class="palace-indicators">
+                            ${isSoulPalace ? '<span class="indicator soul">命</span>' : ''}
+                            ${isBodyPalace ? '<span class="indicator body">身</span>' : ''}
+                        </div>
+                        
+                        <div class="stars-container">
+                            ${renderStarGroup(majorStars, 'major')}
+                            ${renderStarGroup(minorStars, 'minor')}
+                            ${renderStarGroup(adjectiveStars, 'adjective')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            chartGrid.innerHTML = chartHTML;
+        }
+        
+        // 渲染星耀组
+        function renderStarGroup(stars, type) {
+            if (!stars || stars.length === 0) return '';
+            
+            const starsHTML = stars.map(star => {
+                const mutagen = star.mutagen ? `<span class="mutagen ${star.mutagen}">${star.mutagen}</span>` : '';
+                const brightness = star.brightness ? `<span class="brightness">(${star.brightness})</span>` : '';
+                
+                return `
+                    <span class="star ${type}" title="${star.name}${star.brightness ? ` - 亮度: ${star.brightness}` : ''}${star.mutagen ? ` - 四化: ${star.mutagen}` : ''}">
+                        ${star.name}${brightness}
+                        ${mutagen}
+                    </span>
+                `;
+            }).join('');
+            
+            return `<div class="star-group">${starsHTML}</div>`;
+        }
+        
+        // 显示调试信息
+        function displayDebugInfo(astrolabe) {
+            const debugContent = document.getElementById('debugContent');
+            
+            let debugInfo = '🔧 详细调试信息:\n\n';
+            
+            // 基本信息
+            debugInfo += '📊 基本信息:\n';
+            debugInfo += `阳历: ${astrolabe.solarDate}\n`;
+            debugInfo += `农历: ${astrolabe.lunarDate}\n`;
+            debugInfo += `四柱: ${astrolabe.chineseDate}\n`;
+            debugInfo += `时辰: ${astrolabe.time} (${astrolabe.timeRange})\n`;
+            debugInfo += `五行局: ${astrolabe.fiveElementsClass}\n\n`;
+            
+            // 宫位详细信息
+            debugInfo += '🏮 宫位详细信息:\n';
+            astrolabe.palaces.forEach((palace, index) => {
+                debugInfo += `\n${index}. ${palace.name}宫 (${palace.earthlyBranch}):\n`;
+                debugInfo += `   天干: ${palace.heavenlyStem}\n`;
+                debugInfo += `   是否身宫: ${palace.isBodyPalace ? '是' : '否'}\n`;
+                
+                if (palace.majorStars && palace.majorStars.length > 0) {
+                    debugInfo += `   主星: ${palace.majorStars.map(s => 
+                        `${s.name}${s.brightness ? `(${s.brightness})` : ''}${s.mutagen ? `[${s.mutagen}]` : ''}`
+                    ).join(', ')}\n`;
+                }
+                
+                if (palace.minorStars && palace.minorStars.length > 0) {
+                    debugInfo += `   辅星: ${palace.minorStars.map(s => s.name).join(', ')}\n`;
+                }
+                
+                if (palace.adjectiveStars && palace.adjectiveStars.length > 0) {
+                    debugInfo += `   杂耀: ${palace.adjectiveStars.map(s => s.name).join(', ')}\n`;
+                }
+            });
+            
+            // 四化信息
+            debugInfo += '\n🔮 四化星信息:\n';
+            const mutagens = { 禄: [], 权: [], 科: [], 忌: [] };
+            
+            astrolabe.palaces.forEach(palace => {
+                [...(palace.majorStars || []), ...(palace.minorStars || [])].forEach(star => {
+                    if (star.mutagen) {
+                        mutagens[star.mutagen].push(`${star.name}(${palace.name})`);
+                    }
+                });
+            });
+            
+            Object.entries(mutagens).forEach(([type, stars]) => {
+                if (stars.length > 0) {
+                    debugInfo += `化${type}: ${stars.join(', ')}\n`;
+                }
+            });
+            
+            debugContent.textContent = debugInfo;
+        }
+        
+        // 表单提交处理
+        document.getElementById('astroForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!checkLibraryStatus()) {
+                alert('iztro库未正确加载，请检查文件路径！');
+                return;
+            }
+            
+            // 显示加载状态
+            const resultsSection = document.getElementById('results');
+            resultsSection.style.display = 'block';
+            resultsSection.innerHTML = '<div class="loading">正在生成星盘</div>';
+            
+            // 获取表单数据
+            const formData = {
+                name: document.getElementById('name').value,
+                gender: document.getElementById('gender').value,
+                birthday: document.getElementById('birthday').value,
+                birthTime: document.getElementById('birthTime').value
+            };
+            
+            console.log('📝 表单数据:', formData);
+            
+            try {
+                // 生成排盘
+                currentAstrolabe = generateAstrolabe(formData);
+                
+                // 恢复结果区域HTML结构
+                resultsSection.innerHTML = `
+                    <div id="basicInfo" class="basic-info">
+                        <h3>📊 基本信息</h3>
+                        <div id="infoContent" class="info-grid"></div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3 class="chart-title">🏮 紫微斗数星盘</h3>
+                        <div id="chartGrid" class="palace-grid"></div>
+                    </div>
+                    
+                    <div id="debugSection" class="debug-section">
+                        <div class="debug-title">🔧 调试信息</div>
+                        <div id="debugContent" class="debug-content"></div>
+                    </div>
+                `;
+                
+                // 显示结果
+                displayBasicInfo(currentAstrolabe);
+                displayChart(currentAstrolabe);
+                displayDebugInfo(currentAstrolabe);
+                
+                console.log('✅ 排盘显示完成');
+                
+            } catch (error) {
+                resultsSection.innerHTML = `
+                    <div class="status error">
+                        <h3>❌ 排盘失败</h3>
+                        <p>错误信息: ${error.message}</p>
+                        <p>请检查输入信息是否正确，或查看浏览器控制台获取详细错误信息。</p>
+                    </div>
+                `;
+                console.error('❌ 排盘错误:', error);
+            }
+        });
+        
+        // 页面加载完成后检查库状态
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(checkLibraryStatus, 100);
+        });
+    </script>
+</body>
+</html>

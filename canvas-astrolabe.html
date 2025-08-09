@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Canvas星盘绘制</title>
+    <style>
+        body { font-family: "Microsoft YaHei", Arial, sans-serif; margin: 0; padding: 20px; background: #f0f0f0; }
+        .container { max-width: 1000px; margin: 0 auto; text-align: center; }
+        #astrolabeCanvas { border: 2px solid #333; background: white; border-radius: 10px; }
+        .controls { margin: 20px 0; }
+        .btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Canvas星盘绘制</h1>
+        <div class="controls">
+            <input type="date" id="birthDate" value="2000-08-16">
+            <select id="birthHour">
+                <option value="0">子时</option>
+                <option value="1">丑时</option>
+                <option value="2" selected>寅时</option>
+                <option value="3">卯时</option>
+                <option value="4">辰时</option>
+                <option value="5">巳时</option>
+                <option value="6">午时</option>
+                <option value="7">未时</option>
+                <option value="8">申时</option>
+                <option value="9">酉时</option>
+                <option value="10">戌时</option>
+                <option value="11">亥时</option>
+            </select>
+            <select id="gender">
+                <option value="女">女</option>
+                <option value="男">男</option>
+            </select>
+            <button class="btn" onclick="drawAstrolabe()">绘制星盘</button>
+        </div>
+        <canvas id="astrolabeCanvas" width="800" height="800"></canvas>
+    </div>
+
+    <script src="node_modules/iztro/dist/index.min.js"></script>
+    <script>
+        function drawAstrolabe() {
+            const canvas = document.getElementById('astrolabeCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 获取用户输入
+            const birthDate = document.getElementById('birthDate').value;
+            const birthHour = parseInt(document.getElementById('birthHour').value);
+            const gender = document.getElementById('gender').value;
+            
+            // 生成星盘数据
+            const astrolabe = iztro.astro.bySolar(birthDate, birthHour, gender, true, 'zh-CN');
+            
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制12宫格
+            drawPalaceGrid(ctx, astrolabe.palaces);
+            
+            // 绘制中央信息
+            drawCenterInfo(ctx, astrolabe);
+        }
+        
+        function drawPalaceGrid(ctx, palaces) {
+            const canvasWidth = 800;
+            const canvasHeight = 800;
+            const cellWidth = canvasWidth / 4;
+            const cellHeight = canvasHeight / 4;
+            
+            // 12宫位置映射（按传统布局）
+            const positions = [
+                {x: 3, y: 3}, // 命宫
+                {x: 3, y: 2}, {x: 3, y: 1}, {x: 3, y: 0}, // 父母、福德、田宅
+                {x: 2, y: 0}, // 官禄
+                {x: 1, y: 0}, // 交友
+                {x: 0, y: 0}, {x: 0, y: 1}, {x: 0, y: 2}, {x: 0, y: 3}, // 迁移、疾厄、财帛、子女
+                {x: 1, y: 3}, // 夫妻
+                {x: 2, y: 3}  // 兄弟
+            ];
+            
+            palaces.forEach((palace, index) => {
+                if (positions[index]) {
+                    const pos = positions[index];
+                    const x = pos.x * cellWidth;
+                    const y = pos.y * cellHeight;
+                    
+                    // 绘制宫位边框
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, cellWidth, cellHeight);
+                    
+                    // 绘制宫位名称
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 16px Microsoft YaHei';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(palace.name, x + cellWidth/2, y + 25);
+                    
+                    // 绘制天干地支
+                    ctx.font = '14px Microsoft YaHei';
+                    ctx.fillText(palace.heavenlyStem + palace.earthlyBranch, x + cellWidth/2, y + 45);
+                    
+                    // 绘制星耀
+                    drawStars(ctx, x, y, cellWidth, cellHeight, palace);
+                }
+            });
+        }
+        
+        function drawStars(ctx, x, y, width, height, palace) {
+            let yOffset = 65;
+            
+            // 绘制主星
+            if (palace.majorStars && palace.majorStars.length > 0) {
+                palace.majorStars.forEach(star => {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.font = 'bold 12px Microsoft YaHei';
+                    ctx.fillText(star.name, x + width/2, y + yOffset);
+                    yOffset += 18;
+                });
+            }
+            
+            // 绘制辅星
+            if (palace.minorStars && palace.minorStars.length > 0) {
+                palace.minorStars.forEach(star => {
+                    ctx.fillStyle = '#ff8800';
+                    ctx.font = '11px Microsoft YaHei';
+                    ctx.fillText(star.name, x + width/2, y + yOffset);
+                    yOffset += 16;
+                });
+            }
+            
+            // 绘制杂耀（只显示前几个，避免过于拥挤）
+            if (palace.miscStars && palace.miscStars.length > 0) {
+                palace.miscStars.slice(0, 3).forEach(star => {
+                    ctx.fillStyle = '#008800';
+                    ctx.font = '10px Microsoft YaHei';
+                    ctx.fillText(star.name, x + width/2, y + yOffset);
+                    yOffset += 14;
+                });
+            }
+        }
+        
+        function drawCenterInfo(ctx, astrolabe) {
+            const centerX = 400;
+            const centerY = 400;
+            
+            // 绘制中央背景
+            ctx.fillStyle = 'rgba(0, 123, 255, 0.1)';
+            ctx.fillRect(200, 200, 400, 400);
+            
+            // 绘制标题
+            ctx.fillStyle = '#007bff';
+            ctx.font = 'bold 24px Microsoft YaHei';
+            ctx.textAlign = 'center';
+            ctx.fillText('紫微斗数', centerX, centerY - 80);
+            
+            // 绘制基础信息
+            ctx.fillStyle = '#333';
+            ctx.font = '16px Microsoft YaHei';
+            ctx.fillText(`性别：${astrolabe.gender}`, centerX, centerY - 40);
+            ctx.fillText(`生日：${astrolabe.solarDate}`, centerX, centerY - 20);
+            ctx.fillText(`星座：${astrolabe.sign}`, centerX, centerY);
+            ctx.fillText(`生肖：${astrolabe.zodiac}`, centerX, centerY + 20);
+            ctx.fillText(`命宫：${astrolabe.soul}`, centerX, centerY + 40);
+            ctx.fillText(`身宫：${astrolabe.body}`, centerX, centerY + 60);
+        }
+        
+        // 页面加载时绘制默认星盘
+        window.onload = function() {
+            drawAstrolabe();
+        };
+    </script>
+</body>
+</html>
