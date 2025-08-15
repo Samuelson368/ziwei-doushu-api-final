@@ -1,0 +1,354 @@
+from flask import Flask, request, jsonify
+import json
+import subprocess
+import os
+import sys
+import tempfile
+from datetime import datetime
+import traceback
+
+app = Flask(__name__)
+
+def parse_input_time(input_str):
+    """解析用户输入的时间格式"""
+    formats = [
+        "%Y-%m-%d %H:%M",
+        "%Y/%m/%d %H:%M", 
+        "%Y.%m.%d %H:%M",
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%Y.%m.%d"
+    ]
+    
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(input_str.strip(), fmt)
+            return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+        except ValueError:
+            continue
+    
+    raise ValueError("无法解析时间格式")
+
+def call_iztro_api(birth_date, birth_time, gender, is_leap=False):
+    """调用iztro库计算紫微斗数"""
+    try:
+        # 转换性别格式
+        gender_map = {"男": "male", "女": "female", "male": "male", "female": "female"}
+        iztro_gender = gender_map.get(gender, "male")
+        
+        app.logger.info(f"原始性别: {repr(gender)}, 转换后: {iztro_gender}")
+        
+        # 获取当前工作目录
+        current_dir = os.getcwd()
+        
+        # 创建临时JS文件
+        js_code = f"""
+// 设置模块查找路径
+process.chdir('{current_dir}');
+
+try {{
+    const {{ astro }} = require('./node_modules/iztro');
+    
+    const [year, month, day] = '{birth_date}'.split('-').map(Number);
+    const [hour, minute] = '{birth_time}'.split(':').map(Number);
+    
+    console.log('计算参数:', {{year, month, day, hour, minute, gender: '{iztro_gender}'}});
+    
+    // 使用iztro库进行计算
+    const astrolabe = astro.bySolar(
+        year, month, day, hour, 
+        '{iztro_gender}', 
+        {str(is_leap).lower()}, 
+        'zh-CN'
+    );
+    
+    // 格式化输出结果
+    const result = {{
+        success: true,
+        data: {{
+            basic_info: {{
+                birth_date: '{birth_date}',
+                birth_time: '{birth_time}',
+                gender: '{gender}',
+                solar_date: astrolabe.solarDate,
+                lunar_date: astrolabe.lunarDate,
+                chinese_age: astrolabe.chineseAge || '未知'
+            }},
+            palaces: astrolabe.palaces ? astrolabe.palaces.map(palace => ({{
+                name: palace.name || '未知',
+                earthly_branch: palace.earthlyBranch || '未知',
+                heavenly_stem: palace.heavenlyStem || '未知',
+                major_stars: palace.majorStars ? palace.majorStars.map(star => star.name || star) : [],
+                minor_stars: palace.minorStars ? palace.minorStars.map(star => star.name || star) : []
+            }})) : [],
+            summary: {{
+                solar_date: astrolabe.solarDate || '未知',
+                lunar_date: astrolabe.lunarDate || '未知',
+                age: astrolabe.chineseAge || '未知',
+                description: `${{astrolabe.solarDate}}出生，农历${{astrolabe.lunarDate}}`
+            }}
+        }}
+    }};
+    
+    console.log('RESULT_START');
+    console.log(JSON.stringify(result, null, 2));
+    console.log('RESULT_END');
+}} catch (error) {{
+    console.error('计算错误:', error);
+    console.log('ERROR_START');
+    console.log(JSON.stringify({{
+        success: false,
+        error: error.message,
+        stack: error.stack
+    }}));
+    console.log('ERROR_END');
+}}
+"""
+        
+        # 写入临时文件
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.js', delete=False, encoding='utf-8') as f:
+            f.write(js_code)
+            temp_file = f.name
+        
+        try:
+            # 执行Node.js脚本
+            result = subprocess.run([
+                'node', temp_file
+            ], capture_output=True, text=True, timeout=30, encoding='utf-8', cwd=current_dir)
+            
+            app.logger.info(f"Node.js返回码: {result.returncode}")
+            app.logger.info(f"Node.js输出: {result.stdout}")
+            app.logger.info(f"Node.js错误: {result.stderr}")
+            
+            if result.returncode == 0:
+                # 解析输出，找到结果
+                output = result.stdout
+                
+                # 查找结果标记
+                if 'RESULT_START' in output:
+                    start = output.find('RESULT_START') + len('RESULT_START\n')
+                    end = output.find('RESULT_END')
+                    if end != -1:
+                        json_str = output[start:end].strip()
+                        return json.loads(json_str)
+                
+                # 查找错误标记
+                if 'ERROR_START' in output:
+                    start = output.find('ERROR_START') + len('ERROR_START\n')
+                    end = output.find('ERROR_END')
+                    if end != -1:
+                        json_str = output[start:end].strip()
+                        return json.loads(json_str)
+                
+                # 如果没有标记，尝试解析所有JSON行
+                lines = output.strip().split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line.startswith('{'):
+                        try:
+                            return json.loads(line)
+                        except:
+                            continue
+                
+                return {"success": False, "error": "未找到有效的JSON输出", "raw_output": output}
+            else:
+                return {"success": False, "error": f"Node.js执行错误: {result.stderr}"}
+        finally:
+            # 清理临时文件
+            if os.path.exists(temp_file):
+                os.unlink(temp_file)
+                
+    except Exception as e:
+        app.logger.error(f"计算异常: {str(e)}")
+        return {
+            "success": False, 
+            "error": f"计算过程出错: {str(e)}"
+        }
+
+@app.route('/', methods=['GET'])
+def home():
+    return jsonify({
+        "service": "紫微斗数API服务",
+        "version": "1.0.0",
+        "description": "基于ziwei_terminal.py改造的API服务",
+        "endpoints": {
+            "POST /calculate": "计算紫微斗数命盘",
+            "GET /test": "测试用例",
+            "GET /health": "健康检查"
+        },
+        "usage": {
+            "url": "/calculate",
+            "method": "POST",
+            "body": {
+                "birth_datetime": "2000-08-16 14:30",
+                "gender": "男"
+            }
+        }
+    })
+
+@app.route('/debug', methods=['POST'])
+def debug():
+    """调试接口 - 查看接收到的数据"""
+    try:
+        data = request.get_json()
+        return jsonify({
+            "received_data": data,
+            "data_type": type(data),
+            "gender_repr": repr(data.get('gender')) if data else None,
+            "gender_bytes": [ord(c) for c in data.get('gender', '')] if data else None
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/test', methods=['GET'])
+def test():
+    """测试接口 - 使用固定参数"""
+    try:
+        app.logger.info("开始测试...")
+        result = call_iztro_api("2000-08-16", "14:30", "男")
+        
+        return jsonify({
+            "status": "success",
+            "message": "API服务测试完成",
+            "test_data": {
+                "birth_date": "2000-08-16",
+                "birth_time": "14:30",
+                "gender": "男"
+            },
+            "result": result
+        })
+    except Exception as e:
+        app.logger.error(f"测试失败: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": f"测试失败: {str(e)}",
+            "traceback": traceback.format_exc()
+        }), 500
+
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    """紫微斗数计算接口"""
+    try:
+        data = request.get_json()
+        app.logger.info(f"收到请求数据: {data}")
+        
+        # 参数验证
+        if not data:
+            return jsonify({"error": "请提供JSON数据"}), 400
+        
+        # 支持两种参数格式
+        birth_datetime = data.get('birth_datetime')
+        birth_date = data.get('birth_date')
+        birth_time = data.get('birth_time')
+        gender = data.get('gender', '男')
+        
+        # 调试性别参数
+        app.logger.info(f"性别参数: {repr(gender)}, 字节: {[ord(c) for c in str(gender)]}")
+        
+        # 如果有birth_datetime，解析它
+        if birth_datetime:
+            try:
+                parsed_date, parsed_time = parse_input_time(birth_datetime)
+                birth_date = parsed_date
+                birth_time = parsed_time
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+        
+        # 检查必需参数
+        if not birth_date or not birth_time:
+            return jsonify({
+                "error": "缺少必需参数",
+                "required": ["birth_date", "birth_time", "gender"],
+                "example": {
+                    "birth_datetime": "2000-08-16 14:30",
+                    "gender": "男"
+                },
+                "alternative": {
+                    "birth_date": "2000-08-16",
+                    "birth_time": "14:30", 
+                    "gender": "男"
+                }
+            }), 400
+        
+        # 可选参数
+        is_leap = data.get('is_leap', False)
+        
+        # 性别标准化 - 更宽松的匹配
+        gender_str = str(gender).strip()
+        if gender_str in ['男', 'male', 'M', 'm', '1']:
+            gender = '男'
+        elif gender_str in ['女', 'female', 'F', 'f', '0']:
+            gender = '女'
+        else:
+            return jsonify({
+                "error": "性别参数错误，请使用：男/女/male/female",
+                "received": repr(gender_str),
+                "debug": [ord(c) for c in gender_str]
+            }), 400
+        
+        app.logger.info(f"计算参数: birth_date={birth_date}, birth_time={birth_time}, gender={gender}")
+        
+        # 调用计算
+        result = call_iztro_api(birth_date, birth_time, gender, is_leap)
+        
+        if result.get('success'):
+            return jsonify(result)
+        else:
+            return jsonify({
+                "error": result.get('error', '计算失败'),
+                "debug_info": "请检查Node.js和iztro库是否正确安装",
+                "raw_result": result
+            }), 500
+            
+    except Exception as e:
+        app.logger.error(f"计算错误: {str(e)}\n{traceback.format_exc()}")
+        return jsonify({
+            "error": "服务器内部错误",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+@app.route('/health', methods=['GET'])
+def health():
+    """健康检查"""
+    try:
+        # 检查iztro是否可用
+        result = subprocess.run([
+            'node', '-e', 'console.log(JSON.stringify({version: require("iztro/package.json").version}))'
+        ], capture_output=True, text=True, timeout=10)
+        
+        iztro_status = "已安装" if result.returncode == 0 else "未安装"
+        iztro_version = ""
+        
+        if result.returncode == 0:
+            try:
+                version_info = json.loads(result.stdout.strip())
+                iztro_version = version_info.get('version', '未知')
+            except:
+                pass
+        
+        return jsonify({
+            "status": "healthy", 
+            "timestamp": datetime.now().isoformat(),
+            "dependencies": {
+                "iztro": iztro_status,
+                "version": iztro_version
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }), 500
+
+# 添加CORS支持
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)

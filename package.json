@@ -1,12 +1,19 @@
 {
-  "name": "ziwei-api",
+  "name": "ziwei-doushu-api",
   "version": "1.0.0",
-  "description": "紫微斗数API服务",
-  "main": "ziwei_node_script.js",
+  "description": "紫微斗数API服务，基于iztro库的专业排盘工具",
+  "main": "index.py",
+  "scripts": {
+    "start": "python index.py",
+    "test": "node -e \"console.log('Node.js环境正常')\""
+  },
   "dependencies": {
-    "iztro": "^2.4.5"
+    "iztro": "^2.5.3"
   },
   "engines": {
     "node": "18.x"
-  }
+  },
+  "keywords": ["紫微斗数", "astrology", "ziwei", "iztro", "api"],
+  "author": "紫微斗数API开发团队",
+  "license": "MIT"
 }

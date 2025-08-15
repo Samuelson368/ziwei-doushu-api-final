@@ -1,0 +1,9 @@
+ziwei_terminal.py
+.vscode/
+__pycache__/
+*.pyc
+*.log
+temp_*
+test_*
+.git/
+README.md

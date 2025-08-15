@@ -1,0 +1,172 @@
+openapi: 3.0.0
+info:
+  title: 紫微斗数计算器
+  description: 专业的紫微斗数排盘工具，基于传统算法精确计算命盘信息
+  version: 1.0.0
+
+servers:
+  - url: https://你的项目名.vercel.app
+    description: 生产环境API服务器
+
+paths:
+  /calculate:
+    post:
+      summary: 计算紫微斗数命盘
+      description: 根据出生日期、时间和性别计算完整的紫微斗数命盘，包含十二宫位详细信息
+      operationId: calculateZiweiChart
+      tags:
+        - 紫微斗数
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - birth_date
+                - birth_time
+                - gender
+              properties:
+                birth_date:
+                  type: string
+                  format: date
+                  description: 出生日期，格式：YYYY-MM-DD
+                  example: "2000-08-16"
+                birth_time:
+                  type: string
+                  description: 出生时间，支持多种格式：HH:MM, HHMM, HH等
+                  example: "14:30"
+                gender:
+                  type: string
+                  description: 性别
+                  enum: ["男", "女", "male", "female", "m", "f"]
+                  example: "女"
+            examples:
+              example1:
+                summary: 标准示例
+                value:
+                  birth_date: "2000-08-16"
+                  birth_time: "14:30"
+                  gender: "女"
+              example2:
+                summary: 其他时间格式
+                value:
+                  birth_date: "1990-12-25"
+                  birth_time: "0930"
+                  gender: "男"
+      responses:
+        '200':
+          description: 成功返回紫微斗数命盘信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  基本信息:
+                    type: object
+                    properties:
+                      性别:
+                        type: string
+                        example: "女"
+                      阳历:
+                        type: string
+                        example: "2000-08-16"
+                      农历:
+                        type: string
+                        example: "二〇〇〇年七月十七"
+                      时辰:
+                        type: string
+                        example: "14:30 → 未时 (13:00-15:00)"
+                      生肖:
+                        type: string
+                        example: "龙"
+                      命主:
+                        type: string
+                        example: "文昌"
+                      身主:
+                        type: string
+                        example: "天相"
+                  宫位详情:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        地支:
+                          type: string
+                        天干:
+                          type: string
+                        主星:
+                          type: array
+                          items:
+                            type: string
+                        辅星:
+                          type: array
+                          items:
+                            type: string
+                        宫位特点:
+                          type: string
+                  生成时间:
+                    type: string
+                    example: "2025-08-15 10:30:00"
+                  版本信息:
+                    type: string
+                    example: "基于iztro v2.5.3"
+        '400':
+          description: 请求参数错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "缺少必需参数"
+                  required:
+                    type: array
+                    items:
+                      type: string
+        '500':
+          description: 服务器内部错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "排盘计算失败"
+
+  /health:
+    get:
+      summary: 健康检查
+      description: 检查API服务是否正常运行
+      tags:
+        - 系统
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                  dependencies:
+                    type: object
+
+  /test:
+    get:
+      summary: 测试接口
+      description: 使用预设数据测试API功能
+      tags:
+        - 测试
+      responses:
+        '200':
+          description: 测试成功，返回示例命盘数据
