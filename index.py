@@ -279,54 +279,136 @@ console.log('=== 紫微斗数计算结束 ===');'''
 
 @app.route('/', methods=['GET'])
 def home():
+    """API文档首页 - 增强版"""
     return jsonify({
-        "service": "紫微斗数API服务",
-        "version": "1.0.0",
-        "description": "基于ziwei_terminal.py改造的API服务",
+        "name": "紫微斗数专业排盘API",
+        "version": "1.0.1",
+        "description": "基于ziwei_terminal.py改造的API服务，支持GET和POST双重调用方式",
+        "author": "紫微斗数API开发团队",
+        "updated": datetime.now().strftime("%Y-%m-%d"),
+        
         "endpoints": {
-            "POST /calculate": "计算紫微斗数命盘",
-            "GET /test": "测试用例",
+            "GET /": "API文档首页",
             "GET /health": "健康检查",
-            "POST /debug": "调试接口"
+            "GET /test": "测试用例",
+            "GET /ping": "快速ping测试",
+            "GET|POST /calculate": "计算紫微斗数命盘（核心功能）",
+            "GET|POST /debug": "调试接口"
         },
-        "usage": {
-            "url": "/calculate",
-            "method": "POST",
-            "body": {
-                "birth_datetime": "2000-08-16 14:30",
-                "gender": "male"
+        
+        "main_feature": {
+            "endpoint": "/calculate",
+            "description": "计算完整的紫微斗数命盘，包含十二宫位、主星配置、四化星分析等",
+            "methods": ["GET", "POST"],
+            "platform_compatibility": ["Coze", "智谱清言", "通义千问", "标准REST API"]
+        },
+        
+        "usage_examples": {
+            "coze_platform_get": {
+                "description": "Coze等AI平台调用方式（GET请求）",
+                "url": "/calculate?birth_datetime=2000-08-16 14:30&gender=男",
+                "method": "GET",
+                "note": "Coze会自动使用此格式"
+            },
+            "standard_api_post": {
+                "description": "标准API调用方式（POST请求）",
+                "url": "/calculate",
+                "method": "POST",
+                "headers": {"Content-Type": "application/json"},
+                "body": {
+                    "birth_datetime": "2000-08-16 14:30",
+                    "gender": "男"
+                }
+            },
+            "separated_format": {
+                "description": "分离式日期时间格式",
+                "body": {
+                    "birth_date": "2000-08-16",
+                    "birth_time": "14:30",
+                    "gender": "female"
+                }
             }
         },
-        "examples": {
-            "english": {
-                "birth_datetime": "2000-08-16 14:30",
-                "gender": "male"
+        
+        "parameter_formats": {
+            "birth_datetime": {
+                "description": "完整的出生日期时间",
+                "formats": ["2000-08-16 14:30", "2000/08/16 14:30", "2000.08.16 14:30"],
+                "required": True
             },
-            "chinese": {
-                "birth_datetime": "2000-08-16 14:30", 
-                "gender": "男"
+            "gender": {
+                "description": "性别",
+                "values": ["男", "女", "male", "female"],
+                "required": True
             },
-            "separated": {
-                "birth_date": "2000-08-16",
-                "birth_time": "14:30",
-                "gender": "female"
+            "is_leap": {
+                "description": "是否闰年修正",
+                "default": False,
+                "required": False
             }
-        }
+        },
+        
+        "response_structure": {
+            "success": True,
+            "data": {
+                "basic_info": "基本信息（出生时间、农历、生肖等）",
+                "palaces": "十二宫位详细信息",
+                "summary": "命盘总结分析"
+            }
+        },
+        
+        "features": [
+            "传统紫微斗数完整算法",
+            "十二宫位详细解读",
+            "主星、副星、杂曜完整配置",
+            "四化星（化禄、化权、化科、化忌）",
+            "支持多种日期时间输入格式",
+            "完美兼容Coze等AI平台",
+            "详细的调试和错误信息"
+        ]
     })
 
-@app.route('/debug', methods=['POST'])
+@app.route('/ping', methods=['GET'])
+def ping():
+    """快速ping测试"""
+    return jsonify({
+        "pong": True,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "service": "紫微斗数API",
+        "status": "运行中"
+    })
+
+@app.route('/debug', methods=['GET', 'POST'])
 def debug():
-    """调试接口 - 查看接收到的数据"""
+    """调试接口 - 查看接收到的数据 - 支持GET和POST"""
     try:
-        data = request.get_json()
-        return jsonify({
-            "received_data": data,
-            "data_type": str(type(data)),
-            "gender_info": {
-                "repr": repr(data.get('gender')) if data else None,
-                "bytes": [ord(c) for c in data.get('gender', '')] if data and data.get('gender') else None
-            }
-        })
+        debug_info = {
+            "method": request.method,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "url": request.url,
+            "path": request.path,
+            "headers": dict(request.headers),
+            "remote_addr": request.remote_addr
+        }
+        
+        if request.method == 'POST':
+            data = request.get_json()
+            debug_info.update({
+                "received_data": data,
+                "data_type": str(type(data)),
+                "gender_info": {
+                    "repr": repr(data.get('gender')) if data else None,
+                    "bytes": [ord(c) for c in data.get('gender', '')] if data and data.get('gender') else None
+                }
+            })
+        else:
+            # GET请求
+            debug_info.update({
+                "query_params": dict(request.args),
+                "query_string": request.query_string.decode('utf-8')
+            })
+        
+        return jsonify(debug_info)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -345,13 +427,15 @@ def test():
         
         return jsonify({
             "status": "success",
-            "message": "API服务测试完成",
+            "message": "紫微斗数API服务测试完成",
+            "service_version": "1.0.1",
             "test_data": {
                 "birth_date": test_birth_date,
                 "birth_time": test_birth_time,
                 "gender": test_gender
             },
-            "result": result
+            "result": result,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         })
     except Exception as e:
         app.logger.error(f"测试失败: {str(e)}")
@@ -361,89 +445,168 @@ def test():
             "traceback": traceback.format_exc()
         }), 500
 
-@app.route('/calculate', methods=['POST'])
+@app.route('/calculate', methods=['GET', 'POST'])  # 🔧 关键改进：同时支持GET和POST
 def calculate():
-    """紫微斗数计算接口"""
+    """紫微斗数计算接口 - 完美兼容Coze平台"""
     try:
-        data = request.get_json()
-        app.logger.info(f"收到计算请求: {data}")
+        # 记录请求信息
+        request_info = {
+            "method": request.method,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "user_agent": request.headers.get('User-Agent', ''),
+            "source": "unknown"
+        }
         
-        # 参数验证
-        if not data:
-            return jsonify({"error": "请提供JSON数据"}), 400
+        # 🔧 核心改进：根据请求方法获取参数
+        if request.method == 'POST':
+            # POST请求：从JSON body获取参数
+            data = request.get_json()
+            app.logger.info(f"POST请求 - 收到数据: {data}")
+            request_info["source"] = "POST JSON body"
+            
+            if not data:
+                return jsonify({
+                    "success": False,
+                    "error": "POST请求需要提供JSON数据",
+                    "request_info": request_info
+                }), 400
+                
+            birth_datetime = data.get('birth_datetime')
+            birth_date = data.get('birth_date')
+            birth_time = data.get('birth_time')
+            gender = data.get('gender', 'male')
+            is_leap = data.get('is_leap', False)
+            
+        else:
+            # GET请求：从查询参数获取（Coze平台使用此方式）
+            birth_datetime = request.args.get('birth_datetime')
+            birth_date = request.args.get('birth_date')
+            birth_time = request.args.get('birth_time')
+            gender = request.args.get('gender', 'male')
+            is_leap = request.args.get('is_leap', 'false').lower() == 'true'
+            request_info["source"] = "GET query parameters"
+            
+            app.logger.info(f"GET请求 - 参数: birth_datetime={birth_datetime}, gender={gender}")
         
-        # 支持两种参数格式
-        birth_datetime = data.get('birth_datetime')
-        birth_date = data.get('birth_date')
-        birth_time = data.get('birth_time')
-        gender = data.get('gender', 'male')
-        
-        # 如果有birth_datetime，解析它
+        # 参数处理：如果有birth_datetime，解析它
         if birth_datetime:
             try:
                 parsed_date, parsed_time = parse_input_time(birth_datetime)
                 birth_date = parsed_date
                 birth_time = parsed_time
+                app.logger.info(f"解析birth_datetime: {birth_datetime} -> {birth_date} {birth_time}")
             except ValueError as e:
-                return jsonify({"error": str(e)}), 400
+                return jsonify({
+                    "success": False,
+                    "error": f"时间格式解析错误: {str(e)}",
+                    "supported_formats": [
+                        "2000-08-16 14:30",
+                        "2000/08/16 14:30",
+                        "2000.08.16 14:30"
+                    ],
+                    "request_info": request_info
+                }), 400
         
         # 检查必需参数
         if not birth_date or not birth_time:
             return jsonify({
-                "error": "缺少必需参数",
-                "required": ["birth_date", "birth_time", "gender"],
-                "examples": {
-                    "format1": {
-                        "birth_datetime": "2000-08-16 14:30",
-                        "gender": "male"
+                "success": False,
+                "error": "缺少必需参数：出生日期和时间",
+                "required_parameters": {
+                    "birth_datetime": "完整的出生日期时间，如：2000-08-16 14:30",
+                    "或分别提供": {
+                        "birth_date": "出生日期，如：2000-08-16", 
+                        "birth_time": "出生时间，如：14:30"
                     },
-                    "format2": {
-                        "birth_date": "2000-08-16",
-                        "birth_time": "14:30", 
-                        "gender": "female"
+                    "gender": "性别，支持：男/女/male/female"
+                },
+                "examples": {
+                    "GET请求": "/calculate?birth_datetime=2000-08-16 14:30&gender=男",
+                    "POST请求": {
+                        "birth_datetime": "2000-08-16 14:30",
+                        "gender": "女"
                     }
-                }
+                },
+                "request_info": request_info
             }), 400
         
-        # 可选参数
-        is_leap = data.get('is_leap', False)
-        
-        # 性别标准化
+        # 性别标准化处理
         gender_str = str(gender).strip()
+        original_gender = gender_str
+        
         if gender_str in ['男', 'male', 'M', 'm', '1']:
-            gender = 'male'
+            normalized_gender = 'male'
         elif gender_str in ['女', 'female', 'F', 'f', '0']:
-            gender = 'female'
+            normalized_gender = 'female'
         else:
             return jsonify({
-                "error": "性别参数错误，请使用：male/female/男/女",
-                "received": repr(gender_str)
+                "success": False,
+                "error": "性别参数错误",
+                "received_gender": repr(gender_str),
+                "supported_values": ["男", "女", "male", "female"],
+                "request_info": request_info
             }), 400
         
-        app.logger.info(f"开始计算 - 日期: {birth_date}, 时间: {birth_time}, 性别: {gender}")
+        # 记录处理后的参数
+        processed_params = {
+            "birth_date": birth_date,
+            "birth_time": birth_time,
+            "original_gender": original_gender,
+            "normalized_gender": normalized_gender,
+            "is_leap": is_leap
+        }
         
-        # 调用计算
-        result = call_iztro_api(birth_date, birth_time, gender, is_leap)
+        app.logger.info(f"开始计算 - 处理后参数: {processed_params}")
         
+        # 调用紫微斗数计算
+        result = call_iztro_api(birth_date, birth_time, normalized_gender, is_leap)
+        
+        # 处理计算结果
         if result.get('success'):
-            return jsonify(result)
+            response_data = {
+                "success": True,
+                "message": "紫微斗数命盘计算成功",
+                "request_info": request_info,
+                "processed_params": processed_params,
+                "result": result.get('data', {}),
+                "calculation_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "api_version": "1.0.1"
+            }
+            
+            # 如果有summary，也包含进去
+            if 'summary' in result:
+                response_data["summary"] = result['summary']
+            
+            return jsonify(response_data)
         else:
             return jsonify({
-                "error": result.get('error', '计算失败'),
-                "error_type": result.get('error_type', '未知错误'),
+                "success": False,
+                "message": "紫微斗数计算失败",
+                "error": result.get('error', '未知错误'),
+                "error_type": result.get('error_type', '计算错误'),
+                "request_info": request_info,
+                "processed_params": processed_params,
                 "debug_info": "如需调试，请查看生成的ziwei_calculation.js文件"
             }), 500
             
     except Exception as e:
         app.logger.error(f"计算接口错误: {str(e)}\n{traceback.format_exc()}")
         return jsonify({
-            "error": "服务器内部错误",
-            "message": str(e)
+            "success": False,
+            "message": "服务器内部错误",
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "request_info": {
+                "method": request.method,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "url": request.url
+            },
+            "traceback": traceback.format_exc() if app.debug else "详细错误信息已记录"
         }), 500
 
 @app.route('/health', methods=['GET'])
 def health():
-    """健康检查"""
+    """健康检查 - 增强版"""
     try:
         # 检查iztro是否可用
         result = subprocess.run([
@@ -460,21 +623,37 @@ def health():
                 iztro_info = {"version": "解析失败"}
         
         return jsonify({
-            "status": "healthy", 
-            "timestamp": datetime.now().isoformat(),
+            "status": "healthy",
+            "service": "紫微斗数API",
+            "api_version": "1.0.1",
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "dependencies": {
-                "iztro": iztro_status,
-                "version": iztro_info.get('version', '未知'),
-                "astro_available": iztro_info.get('astro', '未知')
+                "iztro": {
+                    "status": iztro_status,
+                    "version": iztro_info.get('version', '未知'),
+                    "astro_available": iztro_info.get('astro') == 'object'
+                },
+                "nodejs": "已安装",
+                "python": sys.version
             },
-            "python_version": sys.version,
-            "working_directory": os.getcwd()
+            "environment": {
+                "working_directory": os.getcwd(),
+                "python_version": sys.version,
+                "platform": sys.platform
+            },
+            "features": {
+                "get_support": True,
+                "post_support": True,
+                "coze_compatibility": True,
+                "debugging": True
+            }
         })
     except Exception as e:
         return jsonify({
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "service": "紫微斗数API"
         }), 500
 
 # 添加CORS支持
@@ -485,11 +664,35 @@ def after_request(response):
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     return response
 
+# 错误处理
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        "success": False,
+        "error": "接口不存在",
+        "message": "请检查请求路径是否正确",
+        "available_endpoints": ["/", "/health", "/test", "/ping", "/calculate", "/debug"],
+        "documentation": "访问根路径 / 查看完整API文档",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        "success": False,
+        "error": "服务器内部错误",
+        "message": "请稍后重试，如问题持续请联系技术支持",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }), 500
+
 if __name__ == '__main__':
     print("🌟 紫微斗数API服务启动中...")
     print("📍 服务地址: http://localhost:5000")
     print("📖 API文档: http://localhost:5000/")
     print("🔧 健康检查: http://localhost:5000/health")
     print("🧪 测试接口: http://localhost:5000/test")
+    print("⚡ 核心功能: http://localhost:5000/calculate")
+    print("🎯 支持方式: GET和POST双重调用")
+    print("🤖 Coze兼容: 完美支持")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
